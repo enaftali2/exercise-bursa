@@ -1,0 +1,113 @@
+---
+- name: Deploy a Docker-Compose Web and Redis Application
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: Add Docker's official GPG key
+      ansible.builtin.shell: |
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+      args:
+        creates: /usr/share/keyrings/docker-archive-keyring.gpg
+
+    - name: Add Docker repository
+      ansible.builtin.shell: |
+        echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+      args:
+        creates: /etc/apt/sources.list.d/docker.list
+
+    - name: Install Docker and Docker Compose v2
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: present
+        update_cache: yes
+
+    - name: Install required Python packages for Docker
+      pip:
+        name:
+          - docker
+          - docker-compose
+        extra_args: "--break-system-packages"
+        state: present
+
+    - name: Ensure Docker service is running
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Create application directory
+      file:
+        path: /opt/docker-app
+        state: directory
+        mode: '0755'
+
+    - name: Copy docker-compose file
+      copy:
+        dest: /opt/docker-app/docker-compose.yml
+        content: |
+          version: '3.8'
+
+          services:
+            app:
+              image: python:3.9
+              container_name: flask_app
+              working_dir: /app
+              volumes:
+                - ./app:/app
+              command: >
+                sh -c "pip install flask redis && python app.py"
+              environment:
+                - REDIS_HOST=redis
+              ports:
+                - "8080:5000"
+              depends_on:
+                - redis
+
+            redis:
+              image: redis
+              container_name: redis_db
+              ports:
+                - "6379:6379"
+
+    - name: Ensure application directories exist
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - /opt/docker-app
+        - /opt/docker-app/app
+
+    - name: Copy Flask application script
+      copy:
+        dest: /opt/docker-app/app/app.py
+        content: |
+          from flask import Flask, jsonify
+
+          app = Flask(__name__)
+
+          @app.route('/')
+          def hello():
+              return "Hello World!"
+
+          if __name__ == '__main__':
+              app.run(host='0.0.0.0', port=5000)
+
+    - name: Deploy application using Docker Compose
+      community.docker.docker_compose_v2:
+        project_src: /opt/docker-app
+        state: present
+
+    - name: Ensure services are running
+      community.docker.docker_container_info:
+        name: flask_app
+      register: flask_status
+
+    - name: Show container status
+      debug:
+        msg: "Flask Server running: {{ flask_status.exists }}"
