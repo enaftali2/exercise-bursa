@@ -31,9 +31,10 @@ The repository includes a Bash script that can unpack multiple packed files, aut
 ### Script
 
 - Shell script for extracting compressed files.
+- support gunzip, bunzip2, unzip, uncompress.
 
 ### Usage
 
 ```sh
-./extract.sh file1.tar.gz file2.zip
+./extract file1.tar.gz file2.zip
 ```
