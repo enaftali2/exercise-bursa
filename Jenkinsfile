@@ -13,7 +13,7 @@ pipeline {
         stage('SCM Checkout') {
             steps {
                 script {
-                    checkout scm  // Clones the repo
+                    checkout scm
                 }
             }
         }
@@ -32,7 +32,7 @@ pipeline {
         stage('Build Artifact') {
             steps {
                 script {
-                    sh 'mvn clean package -DskipTests'  // Builds the Java artifact
+                    sh 'mvn clean package -DskipTests'
                 }
             }
         }
@@ -40,7 +40,7 @@ pipeline {
         stage('Package Artifact') {
             steps {
                 script {
-                    sh "mv target/*.jar ${ARTIFACT_NAME}"  // Rename and prepare the artifact
+                    sh "mv target/*.jar ${ARTIFACT_NAME}"
                 }
             }
         }
