@@ -5,7 +5,7 @@ pipeline {
 
     environment {
         ARTIFACT_NAME = "my-app.jar"
-        REPO_URL = "https://nexus.example.com/repository/maven-releases/"
+        REPO_URL = "http://localhost:8081/repository/maven-releases/"
         REPO_CREDENTIALS = "nexus-credentials"
     }
 
